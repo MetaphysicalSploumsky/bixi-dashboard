@@ -76,7 +76,8 @@ def main():
     df = pl.DataFrame(
         {
             'name' : list(stations_names),
-            'lat' : list(map(lambda t: t[0] if t is not None else 0, eval_coords)),
+            # only write coords within montreal borders
+            'lat' : list(map(lambda t: t[0] if t is not None else 0, eval_coords)), 
             'lon' : list(map(lambda t: t[1] if t is not None else 0, eval_coords)),
             'capacity' : list(stations_caps),
             'number available bikes' : list(stations_num_bikes_av),
