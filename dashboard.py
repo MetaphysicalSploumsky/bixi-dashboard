@@ -5,16 +5,26 @@ from streamlit_folium import st_folium
 import polars as pl
 import pydeck as pdk
 from millify import millify
+from collections import deque
 
 st.write("""
 # STM Strike - Bixi Network Stress
 Long live bixi!
 """)
 
-df = pl.read_csv('./output.csv')
+# read 1031 most recent entries only (bottom up + header)
+n = 1031
+csv_path = "./output.csv"
 
-a, b, c = st.columns([1, 1.2, 1])
-# 1. System-Wide Availability; gauge or metric: "Total Bikes: 4,520 / 10,000"
+with open(csv_path, "r") as f:
+    header = f.readline().strip()
+    last_lines = deque(f, maxlen=n)
+
+csv_data = "\n".join([header] + [line.strip() for line in last_lines])
+df = pl.read_csv(csv_data.encode(), has_header=True)
+
+a, b, c = st.columns([1, 1.2, 1.2])
+# 1. System-Wide Availability; "Total Bikes: 4,520 / 10,000"
 bikes_available = (
     df.select(pl.col('number available bikes'))
     .sum()
