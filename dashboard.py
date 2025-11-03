@@ -14,7 +14,7 @@ Long live bixi!
 
 # read 1031 most recent entries only (bottom up + header)
 n = 1031
-csv_path = "./output.csv"
+csv_path = "./data/output.csv"
 
 with open(csv_path, "r") as f:
     header = f.readline().strip()

@@ -86,13 +86,13 @@ def main():
         }
     )
 
-    path = "./output.csv"
+    path = "./data/output.csv"
     write_header = not os.path.exists(path)
     with open(path, "a") as f:
         df.write_csv(f, include_header=write_header)
         
     # i wanna save the update time too, for the dashboard
-    with open('update_time.txt', 'a') as file_object:
+    with open('./data/update_time.txt', 'a') as file_object:
         file_object.write(dt.datetime.fromtimestamp(info_update_time).strftime("%Y-%m-%d %H:%M:%S\n"))
         
     # also save the number of new entries written to "output.csv"
