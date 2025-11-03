@@ -12,22 +12,22 @@ Hello *bixi!*
 
 df = pl.read_csv('./output.csv')
 
-# compute avg lon and lat, to generate initial map position 
-clean_lon = df.select(pl.col('lon')).filter(pl.col('lon').is_not_null())
-clean_lat = df.select(pl.col('lat')).filter(pl.col('lat').is_not_null())
+city_centre_coords = [45.4996, -73.5668]
+m = folium.Map(location=city_centre_coords, zoom_start=14)
 
-avg_lon = clean_lon.sum() / clean_lon.count()
-avg_lat = clean_lat.sum() / clean_lat.count()
-
-avg_coord = [avg_lat[0].item(), avg_lon.item()]
-
-# generate the map
-m = folium.Map(location=avg_coord, zoom_start=16)
-
-for lat, lon in zip(clean_lat.iter_rows(), clean_lon.iter_rows()):
-    folium.Marker(
-        [lat[0], lon[0]]
-    ).add_to(m)
+for row in df.iter_rows(named=True):
+    if row['is functional'] == 1 and row['number available bikes'] >= 10:
+        folium.Marker(
+            location=[row['lat'], row['lon']],
+            icon=folium.Icon(color="green"),
+            popup=row['name']
+        ).add_to(m)
+    elif row['is functional'] == 1 and row['number available bikes'] < 5:
+        folium.Marker(
+            location=[row['lat'], row['lon']],
+            icon=folium.Icon(color="red"),
+            popup=row['name']
+        ).add_to(m)
 
 st_data = st_folium(m, width=725)
 
