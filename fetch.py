@@ -95,9 +95,6 @@ def main():
     with open('./data/update_time.txt', 'a') as file_object:
         file_object.write(dt.datetime.fromtimestamp(info_update_time).strftime("%Y-%m-%d %H:%M:%S\n"))
         
-    # also save the number of new entries written to "output.csv"
-    # this way we know how many to use from the bottom of the list 
-    # for up to date map
     
 # my cron will 
 # 1. run this file (fetch.py) -> yields "output.csv" and "update_time.txt" 
