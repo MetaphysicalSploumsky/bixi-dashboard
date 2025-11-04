@@ -5,10 +5,12 @@ import polars as pl
 import pydeck as pdk
 from millify import millify
 from collections import deque
-from numpy.random import default_rng as rng
+from io import StringIO
 import pandas as pd
 
 TOTAL_BIKES = 12600 # per bixi, approx.
+MIN_LAT, MAX_LAT = 45.40, 45.55 # Montreal + Longueil
+MIN_LON, MAX_LON = -73.70, -73.45
 
 
 st.write("""
@@ -59,7 +61,15 @@ st.sidebar.header("Filters")
 hide_empty = st.sidebar.checkbox("Hide almost empty stations")
 hide_full = st.sidebar.checkbox("Hide almost full stations")
 
-df_filtered = df.filter(pl.col("is functional") == 1)
+
+
+df_filtered = df.filter(
+    (pl.col("is functional") == 1) &
+    (pl.col("lat") >= MIN_LAT) &
+    (pl.col("lat") <= MAX_LAT) &
+    (pl.col("lon") >= MIN_LON) &
+    (pl.col("lon") <= MAX_LON)
+)
 
 if hide_empty:
     df_filtered = df_filtered.filter(pl.col("number available bikes") >= 3)
@@ -102,10 +112,78 @@ deck = pdk.Deck(
         }
     } # type: ignore
 )
-st.pydeck_chart(deck)
 
+# st.pydeck_chart(deck)
 
-# aggregate time series
+# reads last 18 updates (6 hours) for all stations
+def load_station_history():
+    num_stations = 1031
+    num_updates = 18
+    num_lines = num_stations * num_updates
+
+    csv_path = "./data/output.csv"
+    txt_path = "./data/update_time.txt"
+
+    # Read recent data from CSV
+    with open(csv_path, "r") as f:
+        header = f.readline().strip()
+        last_lines = deque(f, maxlen=num_lines)
+    csv_data = "\n".join([header] + [line.strip() for line in last_lines])
+    df = pl.read_csv(StringIO(csv_data), has_header=True)
+
+    # Read timestamps
+    with open(txt_path, "r") as f:
+        time_lines = [line.strip() for line in deque(f, maxlen=num_updates)]
+
+    df = df.with_columns(
+        pl.Series("update_time", time_lines * num_stations)
+    )
+
+    return df
+
+station_history_df = load_station_history().to_pandas()
+# st.write("## Station-Specific History")
+
+station_names = sorted(station_history_df["name"].unique())
+# selected_station = st.selectbox("Select a station", station_names)
+
+# if selected_station:
+#     station_df = station_history_df[station_history_df["name"] == selected_station]
+#     station_df = station_df.sort_values("update_time")  # type: ignore
+
+#     latest = station_df.iloc[-1]
+#     st.metric(
+#         "Current bikes available",
+#         latest["number available bikes"],
+#     )
+
+#     st.line_chart(
+#         station_df.set_index("update_time")[["number available bikes"]],
+#         width='stretch',
+#         height=250
+#     )
+
+col_map, col_chart = st.columns([2, 1])
+
+with col_map:
+    st.pydeck_chart(deck)
+
+with col_chart:
+    st.write("#### Bikes at Station (Last 12 Hours)")
+    selected_station = st.selectbox("Select a station", station_names)
+    if selected_station:
+        station_df = station_history_df[station_history_df["name"] == selected_station]
+        station_df = station_df.sort_values("update_time") # type: ignore
+        station_df["update_time"] = pd.to_datetime(station_df["update_time"])
+        station_df["time_label"] = station_df["update_time"].dt.strftime("%H:%M")
+        
+        station_chart_df = station_df[["time_label", "number available bikes"]].set_index("time_label")
+        st.line_chart(
+        station_chart_df,
+        width='stretch',
+        height=250
+)
+
 st.write("## Evolution")
 
 df_agg = df_agg.with_columns(pl.col("Time").str.strip_chars().str.to_datetime("%Y-%m-%d %H:%M:%S")).to_pandas()
@@ -121,9 +199,6 @@ st.write("### Bikes and Docks")
 st.line_chart(df_agg[["Total Bikes Available", "Total Docks Available"]],
               width='stretch')
 
-# the cron job is : 1. python3 fetch.py (to get new data into output.csv and update time into update_time.txt)
-#                   2. python3 tracker.py (to compute aggregate data and get them into aggregate.csv)
-# we would like to do this every 5 minutes.
 
 
     
