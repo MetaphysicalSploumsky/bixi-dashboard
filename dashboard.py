@@ -12,8 +12,11 @@ MIN_LON, MAX_LON = -73.70, -73.45
 
 
 st.write("""
-# STM Strike - Bixi Network Stress
-Long live bixi!
+# STM Strike — Bixi Network Under Pressure  
+With public transit on strike all of November, Montreal is turning to Bixi to get around.  
+To handle the surge, the network has added extra drop-off stations and more staff to keep bikes balanced across the city.  
+
+Let's see how the system holds up! 🚲
 """)
 
 # read 1031 most recent entries only (bottom up + header)
@@ -84,6 +87,7 @@ layer = pdk.Layer(
     opacity=0.8,
 )
 
+
 view_state = pdk.ViewState(latitude=45.4996, longitude=-73.5668, zoom=13)
 
 deck = pdk.Deck(
@@ -143,6 +147,7 @@ with col_chart:
         station_df["time_label"] = station_df["update_time"].dt.strftime("%H:%M")
         
         station_chart_df = station_df[["time_label", "number available bikes"]].set_index("time_label")
+        
         st.line_chart(
         station_chart_df,
         width='stretch',
