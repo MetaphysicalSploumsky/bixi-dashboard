@@ -56,12 +56,10 @@ full_prev = df_agg.select(pl.col('Overflow Stations')).tail(2).head(1).item()
 delta_full = num_stations_less_3docks - full_prev
 c.metric("Stations at < 3 docks", f"{num_stations_less_3docks} ({percentage_overflows:.2f} %)", f"{delta_full}", border=True)
  
-
-st.sidebar.header("Filters")
-hide_empty = st.sidebar.checkbox("Hide almost empty stations")
-hide_full = st.sidebar.checkbox("Hide almost full stations")
-
-
+# takes up too much space
+# st.sidebar.header("Filters")
+# hide_empty = st.sidebar.checkbox("Hide almost empty stations")
+# hide_full = st.sidebar.checkbox("Hide almost full stations")
 
 df_filtered = df.filter(
     (pl.col("is functional") == 1) &
@@ -71,10 +69,10 @@ df_filtered = df.filter(
     (pl.col("lon") <= MAX_LON)
 )
 
-if hide_empty:
-    df_filtered = df_filtered.filter(pl.col("number available bikes") >= 3)
-if hide_full:
-    df_filtered = df_filtered.filter(pl.col("number available docks") >= 3)
+# if hide_empty:
+#     df_filtered = df_filtered.filter(pl.col("number available bikes") >= 3)
+# if hide_full:
+#     df_filtered = df_filtered.filter(pl.col("number available docks") >= 3)
 
 data = df_filtered.to_pandas()
 
@@ -184,7 +182,7 @@ with col_chart:
         height=250
 )
 
-st.write("## Evolution")
+st.write("## Global Evolution")
 
 df_agg = df_agg.with_columns(pl.col("Time").str.strip_chars().str.to_datetime("%Y-%m-%d %H:%M:%S")).to_pandas()
 df_agg = df_agg.set_index("Time")
@@ -193,7 +191,8 @@ df_agg = df_agg.set_index("Time")
 # later add options to limit to : last 24h, last 12h 
 st.write("### Station Stress")
 st.line_chart(df_agg[["Empty Stations", "Overflow Stations"]],
-              width='stretch', color=['#FF0000', '#FFC800'])
+              width='stretch', color=['#FF0000', '#FFC800'],
+              )
 
 st.write("### Bikes and Docks")
 st.line_chart(df_agg[["Total Bikes Available", "Total Docks Available"]],
