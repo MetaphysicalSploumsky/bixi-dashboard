@@ -1,5 +1,3 @@
-# read from the csv, updates the dashboard
-# dashboard.py
 import streamlit as st 
 import polars as pl
 import pydeck as pdk
@@ -17,8 +15,6 @@ st.write("""
 # STM Strike - Bixi Network Stress
 Long live bixi!
 """)
-
-
 
 # read 1031 most recent entries only (bottom up + header)
 n = 1031
@@ -55,11 +51,7 @@ percentage_overflows = num_stations_less_3docks / total_stations * 100
 full_prev = df_agg.select(pl.col('Overflow Stations')).tail(2).head(1).item()
 delta_full = num_stations_less_3docks - full_prev
 c.metric("Stations at < 3 docks", f"{num_stations_less_3docks} ({percentage_overflows:.2f} %)", f"{delta_full}", border=True)
- 
-# takes up too much space
-# st.sidebar.header("Filters")
-# hide_empty = st.sidebar.checkbox("Hide almost empty stations")
-# hide_full = st.sidebar.checkbox("Hide almost full stations")
+
 
 df_filtered = df.filter(
     (pl.col("is functional") == 1) &
@@ -69,10 +61,6 @@ df_filtered = df.filter(
     (pl.col("lon") <= MAX_LON)
 )
 
-# if hide_empty:
-#     df_filtered = df_filtered.filter(pl.col("number available bikes") >= 3)
-# if hide_full:
-#     df_filtered = df_filtered.filter(pl.col("number available docks") >= 3)
 
 data = df_filtered.to_pandas()
 
@@ -111,8 +99,6 @@ deck = pdk.Deck(
     } # type: ignore
 )
 
-# st.pydeck_chart(deck)
-
 # reads last 18 updates (6 hours) for all stations
 def load_station_history():
     num_stations = 1031
@@ -140,26 +126,7 @@ def load_station_history():
     return df
 
 station_history_df = load_station_history().to_pandas()
-# st.write("## Station-Specific History")
-
 station_names = sorted(station_history_df["name"].unique())
-# selected_station = st.selectbox("Select a station", station_names)
-
-# if selected_station:
-#     station_df = station_history_df[station_history_df["name"] == selected_station]
-#     station_df = station_df.sort_values("update_time")  # type: ignore
-
-#     latest = station_df.iloc[-1]
-#     st.metric(
-#         "Current bikes available",
-#         latest["number available bikes"],
-#     )
-
-#     st.line_chart(
-#         station_df.set_index("update_time")[["number available bikes"]],
-#         width='stretch',
-#         height=250
-#     )
 
 col_map, col_chart = st.columns([2, 1])
 
@@ -187,8 +154,6 @@ st.write("## Global Evolution")
 df_agg = df_agg.with_columns(pl.col("Time").str.strip_chars().str.to_datetime("%Y-%m-%d %H:%M:%S")).to_pandas()
 df_agg = df_agg.set_index("Time")
 
-# currently from start to end
-# later add options to limit to : last 24h, last 12h 
 st.write("### Station Stress")
 st.line_chart(df_agg[["Empty Stations", "Overflow Stations"]],
               width='stretch', color=['#FF0000', '#FFC800'],
