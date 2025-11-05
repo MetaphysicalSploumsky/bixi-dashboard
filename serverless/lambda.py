@@ -1,10 +1,9 @@
 def main():
+    import os
     import requests
     import datetime as dt
     import polars as pl
     from typing import Tuple
-
-    from env_var import ENDPOINT, PW, USERNAME, NAME, PORT
     import psycopg2
     import psycopg2.extras
     
@@ -53,7 +52,12 @@ def main():
 
         conn = None
         try:
-            conn = psycopg2.connect(dbname=NAME, user=USERNAME, password=PW, host=ENDPOINT)
+            conn = psycopg2.connect(
+                dbname=os.environ['NAME'], 
+                user=os.environ['USERNAME'], 
+                password=os.environ['PW'], 
+                host=os.environ['ENDPOINT']
+            )
         except (Exception, psycopg2.Error) as error:
             print(f"Error connecting to database: {error}")
             return False
@@ -88,7 +92,12 @@ def main():
             conn = None
             
             try:
-                conn = psycopg2.connect(dbname=NAME, user=USERNAME, password=PW, host=ENDPOINT)
+                conn = psycopg2.connect(
+                dbname=os.environ['NAME'], 
+                user=os.environ['USERNAME'], 
+                password=os.environ['PW'], 
+                host=os.environ['ENDPOINT']
+            )
             except (Exception, psycopg2.Error) as error:
                 print(f"Error connecting to database: {error}")
                 return 
@@ -143,3 +152,6 @@ def main():
                         
         if fetch():
             aggregate()
+            
+def lambda_handler(event, context):
+    main()
