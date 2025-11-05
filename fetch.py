@@ -5,8 +5,10 @@ import polars as pl
 from typing import Tuple
 import os
 
-# fetch.py
-# fetches data, updates the csv file
+from env_var import ENDPOINT, PW, USERNAME, NAME, PORT
+import psycopg2
+
+# fetches data, transform, update the db 
 def get_coords (station_info : dict) -> Tuple[float, float] | None:
     try:
         lat = station_info['lat']
@@ -54,6 +56,8 @@ def is_functional (station_status : dict) -> bool | None:
         print(f"KeyError: {e} - The key was not found in the dictionary with id: {station_status['station_id']}.")
     
 def main():
+    
+    
     station_info_url = 'https://gbfs.velobixi.com/gbfs/2-2/en/station_information.json'
     info_response = requests.get(station_info_url)
     stations_info_list = info_response.json()['data']['stations']
@@ -71,8 +75,8 @@ def main():
     stations_num_docks_av = map(get_num_docks_available, stations_status_list)
     stations_isFunctional = map(is_functional, stations_status_list)
 
-    # turn this info into a dataframe (unnecessary ? overhead?) -> write to csv
     eval_coords = list(stations_coords)
+    
     df = pl.DataFrame(
         {
             'name' : list(stations_names),
@@ -85,21 +89,59 @@ def main():
             'is functional' : list(stations_isFunctional)
         }
     )
-
-    path = "./data/output.csv"
-    write_header = not os.path.exists(path)
-    with open(path, "a") as f:
-        df.write_csv(f, include_header=write_header)
-        
-    # i wanna save the update time too, for the dashboard
-    with open('./data/update_time.txt', 'a') as file_object:
-        file_object.write(dt.datetime.fromtimestamp(info_update_time).strftime("%Y-%m-%d %H:%M:%S\n"))
-        
     
-# my cron will 
-# 1. run this file (fetch.py) -> yields "output.csv" and "update_time.txt" 
-# 2. run dashboard.py -> reads the above two files, and updates the dashboard (streamlit)
-# 3. Right now data is in project folder. After Im done making stuff pretty, 
-# I will move the data into a sql database and read it from there
+    try:
+        fetch_timestamp = dt.datetime.fromtimestamp(info_update_time)
+    except NameError:
+        print("'info_update_time' not set. Using current time ")
+        fetch_timestamp = dt.datetime.now() 
+
+    conn = None
+    try:
+        conn = psycopg2.connect(dbname=NAME, user=USERNAME, password=PW, host=ENDPOINT)
+    except (Exception, psycopg2.Error) as error:
+        print(f"Error connecting to database: {error}")
+
+    if conn:
+        id_counter = 0 
+
+        command = """
+            INSERT INTO station_status_log
+            (station_id, name, lat, lon, capacity, bikes_av, docks_av, is_functional, fetched_at) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s); 
+            """
+        
+        try:
+            with conn:
+                with conn.cursor() as curs:
+                    for row in df.iter_rows():
+                    
+                        id_counter += 1
+                        
+                        data_tuple = (
+                            str(id_counter),       # %s (id)
+                            row[0],           # %s (name)
+                            row[1],           # %s (lat)
+                            row[2],           # %s (lon)
+                            row[3],           # %s (capacity)
+                            row[4],           # %s (bikes_av)
+                            row[5],           # %s (docks_av)
+                            (row[6] == 1),           # %s (is_func, as bool )
+                            (fetch_timestamp)   # %s (timestamp of fetch)
+                        )
+                        
+                        curs.execute(command, data_tuple)
+        
+            print(f"Successfully inserted {id_counter} rows.")
+
+        except (Exception, psycopg2.Error) as error:
+            print(f"Error inserting record: {error}")
+        
+        finally:
+            if conn is not None:
+                conn.close()
+                print("Database connection closed.")
+            
+        
 if __name__ == "__main__":
     main()

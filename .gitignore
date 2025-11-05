@@ -4,3 +4,4 @@ output.csv
 update_time.txt
 TODO.txt
 ./data
+env_var.py

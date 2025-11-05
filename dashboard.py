@@ -168,6 +168,3 @@ st.write("### Bikes and Docks")
 st.line_chart(df_agg[["Total Bikes Available", "Total Docks Available"]],
               width='stretch')
 
-
-
-    
