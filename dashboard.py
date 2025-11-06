@@ -4,7 +4,6 @@ import pydeck as pdk
 from millify import millify
 import pandas as pd
 import psycopg2
-from env_var import ENDPOINT, PW, USERNAME, NAME, PORT
 from streamlit_autorefresh import st_autorefresh
 
 TOTAL_BIKES = 12600 # per bixi, approx.
@@ -15,11 +14,11 @@ MIN_LON, MAX_LON = -73.70, -73.45
 def get_db_connection():
     try:
         conn = psycopg2.connect(
-            dbname=NAME, 
-            user=USERNAME, 
-            password=PW, 
-            host=ENDPOINT, 
-            port=PORT
+            dbname=st.secrets["database"]["NAME"], 
+            user=st.secrets["database"]["DBUSERNAME"], 
+            password=st.secrets["database"]["PW"], 
+            host = st.secrets["database"]["ENDPOINT"], 
+            port=st.secrets["database"]["PORT"]
         )
         return conn # cache 
     except (Exception, psycopg2.Error) as error:
