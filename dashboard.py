@@ -5,6 +5,7 @@ from millify import millify
 import pandas as pd
 import psycopg2
 from env_var import ENDPOINT, PW, USERNAME, NAME, PORT
+from streamlit_autorefresh import st_autorefresh
 
 TOTAL_BIKES = 12600 # per bixi, approx.
 MIN_LAT, MAX_LAT = 45.40, 45.55 # Montreal + Longueil
@@ -101,6 +102,8 @@ To handle the surge, the network has added extra drop-off stations and more staf
 
 The metrics, map and line charts below will be updated every 5 minutes. Let's see how the system holds up! 🚲
 """)
+
+st_autorefresh(interval=300000, key="datarefresher")
 
 conn = get_db_connection()
 if conn is None:
