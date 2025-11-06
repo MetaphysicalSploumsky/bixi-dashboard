@@ -7,20 +7,36 @@ from typing import Tuple
 from env_var import ENDPOINT, PW, USERNAME, NAME, PORT
 import psycopg2
 import psycopg2.extras
-
 # fetches data, transform, update the db
     
 def main(): 
     station_info_url = 'https://gbfs.velobixi.com/gbfs/2-2/en/station_information.json'
-    info_response = requests.get(station_info_url)
+    station_status_url = 'https://gbfs.velobixi.com/gbfs/2-2/en/station_status.json'
+    
+    info_response = None
+    status_response = None
+    try :
+        print("Fetching from info feed.")
+        info_response = requests.get(station_info_url)
+        print("Success.")
+    except Exception as e:
+        print(f"Couldn't get from info feed, {e}")
+        return
+        
+    try :
+        print("Fetching from status feed.")
+        status_response = requests.get(station_status_url)
+        print("Success.")
+    except Exception as e:
+        print(f"Couldn't get from status feed, {e}")
+        return
+    
     stations_info_list = info_response.json()['data']['stations']
     info_update_time = info_response.json()['last_updated']
-
-    station_status_url = 'https://gbfs.velobixi.com/gbfs/2-2/en/station_status.json'
-    status_response = requests.get(station_status_url)
     stations_status_list = status_response.json()['data']['stations']
 
     try:
+        print("Processing data.")
         df_info = pl.DataFrame(stations_info_list)
         df_status = pl.DataFrame(stations_status_list)
 
@@ -41,19 +57,23 @@ def main():
             .alias("is_functional")
             .fill_null(False) 
         )
+        print("Data processed.")
     except Exception as e:
         print(f"Error processing data: {e}")
         return 
 
     try:
         fetch_timestamp = dt.datetime.fromtimestamp(info_update_time)
+        print(f"Feed was updated: {fetch_timestamp}")
     except NameError:
         print("'info_update_time' not av. Using current time ")
         fetch_timestamp = dt.datetime.now() 
 
     conn = None
     try:
+        print("Connecting to db.")
         conn = psycopg2.connect(dbname=NAME, user=USERNAME, password=PW, host=ENDPOINT)
+        print("Connected to db.")
     except (Exception, psycopg2.Error) as error:
         print(f"Error connecting to database: {error}")
         return 
@@ -71,8 +91,9 @@ def main():
         try:
             with conn:
                 with conn.cursor() as curs:
+                    print("Inserting in db.")
                     psycopg2.extras.execute_batch(curs, command, data_to_insert)
-                    print(f"Successfully batch-inserted {len(data_to_insert)} rows.")
+                    print(f"Successfully inserted {len(data_to_insert)} rows.")
                         
         except (Exception, psycopg2.Error) as error:
             print(f"Error during batch insert: {error}")
