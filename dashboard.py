@@ -34,6 +34,11 @@ def load_latest_snapshot(_conn):
     
     df = pl.read_database(query, _conn)
     
+    if not df.is_empty():
+        df = df.with_columns(
+            pl.col("fetched_at").dt.convert_time_zone("America/Toronto")
+        )
+    
     df = df.rename({
         "is_functional": "is functional",
         "bikes_av": "number available bikes",
@@ -47,6 +52,11 @@ def load_aggregate_history(_conn):
     query = "SELECT * FROM system_aggregate_log ORDER BY fetched_at ASC;"
     
     df_agg = pl.read_database(query, _conn)
+    
+    if not df_agg.is_empty():
+        df_agg = df_agg.with_columns(
+            pl.col("fetched_at").dt.convert_time_zone("America/Toronto")
+        )
     
     df_agg = df_agg.rename({
         "fetched_at": "Time",
@@ -72,6 +82,11 @@ def load_station_history(_conn):
     
     df_hist = pl.read_database(query, _conn)
     
+    if not df_hist.is_empty():
+        df_hist = df_hist.with_columns(
+            pl.col("fetched_at").dt.convert_time_zone("America/Toronto")
+        )
+    
     df_hist = df_hist.rename({
         "fetched_at": "update_time",
         "bikes_av": "number available bikes"
@@ -80,8 +95,8 @@ def load_station_history(_conn):
 
 
 st.write("""
-# STM Strike — Bixi Network Under Pressure  
-With public transit on strike all of November, Montreal is turning to Bixi to get around.  
+# STM Strike — Can Bixi save us all?!
+With public transit on strike all of November, Montrealers are turning to Bixi to get around.  
 To handle the surge, the network has added extra drop-off stations and more staff to keep bikes balanced across the city.  
 
 Let's see how the system holds up! 🚲
@@ -95,7 +110,7 @@ df = load_latest_snapshot(conn)
 df_agg = load_aggregate_history(conn)
 
 if df.is_empty() or df_agg.is_empty():
-    st.warning("No data found in the database. Please run the fetcher scripts.")
+    st.warning("No data found in the database")
     st.stop()
 
 
