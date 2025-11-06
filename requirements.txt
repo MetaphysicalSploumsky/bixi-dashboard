@@ -4,3 +4,4 @@ requests
 pydeck
 millify
 pandas
+streamlit_autorefresh
