@@ -3,7 +3,6 @@ def main():
     import requests
     import datetime as dt
     import polars as pl
-    from typing import Tuple
     import psycopg2
     import psycopg2.extras
     
@@ -58,6 +57,7 @@ def main():
                 password=os.environ['PW'], 
                 host=os.environ['ENDPOINT']
             )
+            
         except (Exception, psycopg2.Error) as error:
             print(f"Error connecting to database: {error}")
             return False
@@ -88,70 +88,85 @@ def main():
                     print("Database connection closed.")
                     return bool
     
-        def aggregate():
-            conn = None
+    def aggregate():
+        conn = None
             
-            try:
-                conn = psycopg2.connect(
-                dbname=os.environ['NAME'], 
-                user=os.environ['USERNAME'], 
-                password=os.environ['PW'], 
-                host=os.environ['ENDPOINT']
-            )
-            except (Exception, psycopg2.Error) as error:
-                print(f"Error connecting to database: {error}")
-                return 
+        try:
+            conn = psycopg2.connect(
+            dbname=os.environ['NAME'], 
+            user=os.environ['USERNAME'], 
+            password=os.environ['PW'], 
+            host=os.environ['ENDPOINT']
+        )
+        except (Exception, psycopg2.Error) as error:
+            print(f"Error connecting to database: {error}")
+            return 
                 
-            if conn:
-                try:
-                    with conn:
-                        with conn.cursor() as curs:
+        if conn:
+            try:
+                with conn:
+                    with conn.cursor() as curs:
                     
-                            curs.execute("SELECT MAX(fetched_at) FROM station_status_log;")
-                            row = curs.fetchone()
-                        
-                            if not (row and row[0]):
-                                print("No data found in station_status_log.")
-                                return 
-                                
-                            most_recent = row[0]
-                            print(f"Processing data for timestamp: {most_recent}")
-
-                            aggregate_command = """
-                                SELECT
-                                    SUM(bikes_av),
-                                    SUM(docks_av),
-                                    COUNT(*) FILTER (WHERE bikes_av < 3),
-                                    COUNT(*) FILTER (WHERE docks_av < 3)
-                                FROM station_status_log
-                                WHERE fetched_at = %s;
-                            """
-                            curs.execute(aggregate_command, (most_recent,))
-                            agg_row = curs.fetchone()
+                        curs.execute("SELECT MAX(fetched_at) FROM station_status_log;")
+                        row = curs.fetchone()
                     
-                            if not agg_row:
-                                print(f"Could not fetch aggregates for {most_recent}.")
-                                raise Exception("Aggregate query returned no rows")
-
-                            insert_command = """
-                                INSERT INTO system_aggregate_log
-                                (total_bikes_av, total_docks_av, empty_stations, full_stations, fetched_at)
-                                VALUES (%s, %s, %s, %s, %s)
-                            """
-                            vals = agg_row + (most_recent,)
+                        if not (row and row[0]):
+                            print("No data found in station_status_log.")
+                            return 
                             
-                            curs.execute(insert_command, vals)
-                            print("Successfully inserted aggregate data.")
-                                
-                except (Exception, psycopg2.DatabaseError) as error:
-                    print(f"Database error occurred: {error}. Transaction will be rolled back.")
-                finally:
-                    if conn is not None:
-                        conn.close()
-                        print("Database connection closed.")
+                        most_recent = row[0]
+                        print(f"Processing data for timestamp: {most_recent}")
+
+                        aggregate_command = """
+                            SELECT
+                                SUM(bikes_av),
+                                SUM(docks_av),
+                                COUNT(*) FILTER (WHERE bikes_av < 3),
+                                COUNT(*) FILTER (WHERE docks_av < 3)
+                            FROM station_status_log
+                            WHERE fetched_at = %s;
+                        """
+                        curs.execute(aggregate_command, (most_recent,))
+                        agg_row = curs.fetchone()
+                
+                        if not agg_row:
+                            print(f"Could not fetch aggregates for {most_recent}.")
+                            raise Exception("Aggregate query returned no rows")
+
+                        insert_command = """
+                            INSERT INTO system_aggregate_log
+                            (total_bikes_av, total_docks_av, empty_stations, full_stations, fetched_at)
+                            VALUES (%s, %s, %s, %s, %s)
+                        """
+                        vals = agg_row + (most_recent,)
                         
-        if fetch():
-            aggregate()
+                    curs.execute(insert_command, vals)
+                    print("Successfully inserted aggregate data.")
+                                
+            except (Exception, psycopg2.DatabaseError) as error:
+                print(f"Database error occurred: {error}. Transaction will be rolled back.")
+            finally:
+                if conn is not None:
+                    conn.close()
+                    print("Database connection closed.")
+                        
+    if fetch():
+        print("Fetch successfull. Aggregating...")
+        aggregate()
+        print("Lambda successful.")
+        return True
+    else:
+        print("Lambda unsuccessful.")
+        return False
             
-def lambda_handler(event, context):
-    main()
+def handler(event, context):
+    try:
+        return main()
+    except Exception as e:
+        print(f"Unhandled: {e}")
+        return False
+    
+# code works. 
+# after lunch : run the container -> export needed variables -> see print statements locally
+# push to ECR -> create lambda function -> test on cloud -> see print statements and changes in db on aws
+# done! 
