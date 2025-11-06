@@ -1,0 +1,6 @@
+polars
+psycopg2-binary
+requests
+pydeck
+millify
+pandas
