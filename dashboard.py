@@ -99,7 +99,7 @@ st.write("""
 With public transit on strike all of November, Montrealers are turning to Bixi to get around.  
 To handle the surge, the network has added extra drop-off stations and more staff to keep bikes balanced across the city.  
 
-Let's see how the system holds up! 🚲
+The metrics, map and line charts below will be updated every 5 minutes. Let's see how the system holds up! 🚲
 """)
 
 conn = get_db_connection()
