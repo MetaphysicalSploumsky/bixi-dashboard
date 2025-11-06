@@ -1,10 +1,14 @@
+import os
+import requests
+import datetime as dt
+import polars as pl
+import psycopg2
+import psycopg2.extras
+import pytz
 def main():
-    import os
-    import requests
-    import datetime as dt
-    import polars as pl
-    import psycopg2
-    import psycopg2.extras
+
+    utc = pytz.utc
+    montreal_tz = pytz.timezone("America/Toronto")
     
     def fetch(): 
         bool = None
@@ -44,20 +48,25 @@ def main():
             return False
 
         try:
-            fetch_timestamp = dt.datetime.fromtimestamp(info_update_time)
-        except NameError:
-            print("'info_update_time' not av. Using current time ")
-            fetch_timestamp = dt.datetime.now() 
+            montreal_tz = pytz.timezone("America/Toronto")
+            utc_timestamp = dt.datetime.fromtimestamp(info_update_time, dt.timezone.utc)
+            fetch_timestamp = utc_timestamp.astimezone(montreal_tz)
+            print(f"Timestamp converted to Montreal time: {fetch_timestamp}")
+        
+        except Exception as e:
+            print(f"Error processing 'info_update_time': {e}. Using current time.")
+            montreal_tz = pytz.timezone("America/Toronto")
+            utc_now = dt.datetime.now(dt.timezone.utc)
+            fetch_timestamp = utc_now.astimezone(montreal_tz)
 
         conn = None
         try:
             conn = psycopg2.connect(
                 dbname=os.environ['NAME'], 
-                user=os.environ['USERNAME'], 
+                user=os.environ['DBUSERNAME'], 
                 password=os.environ['PW'], 
                 host=os.environ['ENDPOINT']
             )
-            
         except (Exception, psycopg2.Error) as error:
             print(f"Error connecting to database: {error}")
             return False
@@ -94,13 +103,13 @@ def main():
         try:
             conn = psycopg2.connect(
             dbname=os.environ['NAME'], 
-            user=os.environ['USERNAME'], 
+            user=os.environ['DBUSERNAME'], 
             password=os.environ['PW'], 
             host=os.environ['ENDPOINT']
         )
         except (Exception, psycopg2.Error) as error:
             print(f"Error connecting to database: {error}")
-            return 
+            return False
                 
         if conn:
             try:
@@ -140,15 +149,17 @@ def main():
                         """
                         vals = agg_row + (most_recent,)
                         
-                    curs.execute(insert_command, vals)
-                    print("Successfully inserted aggregate data.")
+                        curs.execute(insert_command, vals)
+                        print("Successfully inserted aggregate data.")
                                 
             except (Exception, psycopg2.DatabaseError) as error:
                 print(f"Database error occurred: {error}. Transaction will be rolled back.")
+                return False
             finally:
                 if conn is not None:
                     conn.close()
                     print("Database connection closed.")
+                    return True
                         
     if fetch():
         print("Fetch successfull. Aggregating...")
@@ -170,3 +181,10 @@ def handler(event, context):
 # after lunch : run the container -> export needed variables -> see print statements locally
 # push to ECR -> create lambda function -> test on cloud -> see print statements and changes in db on aws
 # done! 
+# when pushing : bixi-lambda
+
+if __name__ == "__main__":
+    main()
+    
+# docker buildx build --platform linux/arm64 --provenance=false -t bixi-lambda:latest .
+# docker run --platform linux/arm64 -p 9000:8080 bixi-lambda:latest
