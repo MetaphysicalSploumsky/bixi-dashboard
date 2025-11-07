@@ -95,7 +95,7 @@ def load_station_history(_conn):
 
 
 st.write("""
-# STM Strike — Can Bixi save us all?!
+# STM Strike — Can Bixi save us?!
 With public transit on strike all of November, Montrealers are turning to Bixi to get around.  
 To handle the surge, the network has added extra drop-off stations and more staff to keep bikes balanced across the city.  
 
@@ -194,7 +194,7 @@ with col_map:
     st.pydeck_chart(deck)
 
 with col_chart:
-    st.write("#### Bikes at Station (Last ~12 Hours)")
+    st.write("#### Bikes at Station (Last ~2 Hours)")
     selected_station = st.selectbox("Select a station", station_names)
     if selected_station:
         station_df = station_history_df[station_history_df["name"] == selected_station]
