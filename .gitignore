@@ -6,3 +6,4 @@ TODO.txt
 ./data
 env_var.py
 ./serverless/.env
+./cleaner/cron.log
