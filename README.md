@@ -10,7 +10,6 @@ graph LR
     B -->|Docker Image| C["AWS ECR"]
     B -->|Write Processed Data| D["AWS RDS PostgreSQL"]
     D -->|SQL Queries| E["Streamlit Dashboard"]
-    E -->|Visuals| F["End User"]
 ```
 
 
