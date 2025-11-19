@@ -11,6 +11,7 @@ graph LR
     B -->|Write Processed Data| D["AWS RDS PostgreSQL"]
     D -->|SQL Queries| E["Streamlit Dashboard"]
     E -->|Visuals| F["End User"]
+```
 
 
 
